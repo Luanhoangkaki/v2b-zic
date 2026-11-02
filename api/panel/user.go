@@ -39,29 +39,29 @@ func (c *Client) GetUserList() ([]UserInfo, error) {
 		SetDoNotParseResponse(true).
 		Get(path)
 	if r == nil || r.RawResponse == nil {
-		return nil, fmt.Errorf("received nil response or raw response")
+		return nil, c.checkResponse(r, path, err)
 	}
 	defer r.RawResponse.Body.Close()
-
-	if r.StatusCode() == 304 {
-		return nil, nil
-	}
 
 	if err = c.checkResponse(r, path, err); err != nil {
 		return nil, err
 	}
+	if r.StatusCode() == 304 {
+		return nil, nil
+	}
+
 	userlist := &UserListBody{}
 	if strings.Contains(r.Header().Get("Content-Type"), "application/x-msgpack") {
 		decoder := msgpack.NewDecoder(r.RawResponse.Body)
 		if err := decoder.Decode(userlist); err != nil {
-			return nil, fmt.Errorf("decode user list error: %w", err)
+			return nil, fmt.Errorf("decode user list error: invalid Panel response")
 		}
 	} else {
 		dec := jsontext.NewDecoder(r.RawResponse.Body)
 		for {
 			tok, err := dec.ReadToken()
 			if err != nil {
-				return nil, fmt.Errorf("decode user list error: %w", err)
+				return nil, fmt.Errorf("decode user list error: invalid Panel response")
 			}
 			if tok.Kind() == '"' && tok.String() == "users" {
 				break
@@ -69,7 +69,7 @@ func (c *Client) GetUserList() ([]UserInfo, error) {
 		}
 		tok, err := dec.ReadToken()
 		if err != nil {
-			return nil, fmt.Errorf("decode user list error: %w", err)
+			return nil, fmt.Errorf("decode user list error: invalid Panel response")
 		}
 		if tok.Kind() != '[' {
 			return nil, fmt.Errorf(`decode user list error: expected "users" array`)
@@ -77,11 +77,11 @@ func (c *Client) GetUserList() ([]UserInfo, error) {
 		for dec.PeekKind() != ']' {
 			val, err := dec.ReadValue()
 			if err != nil {
-				return nil, fmt.Errorf("decode user list error: read user object: %w", err)
+				return nil, fmt.Errorf("decode user list error: invalid Panel response")
 			}
 			var u UserInfo
 			if err := json.Unmarshal(val, &u); err != nil {
-				return nil, fmt.Errorf("decode user list error: unmarshal user error: %w", err)
+				return nil, fmt.Errorf("decode user list error: invalid Panel response")
 			}
 			userlist.Users = append(userlist.Users, u)
 		}
@@ -92,26 +92,24 @@ func (c *Client) GetUserList() ([]UserInfo, error) {
 
 // GetUserAlive will fetch the alive_ip count for users
 func (c *Client) GetUserAlive() (map[int]int, error) {
-	c.AliveMap = &AliveMap{}
 	const path = "/api/v1/server/UniProxy/alivelist"
 	r, err := c.client.R().
 		ForceContentType("application/json").
 		Get(path)
-	if err != nil || r.StatusCode() >= 399 {
-		c.AliveMap.Alive = make(map[int]int)
-		return c.AliveMap.Alive, nil
+	if err = c.checkResponse(r, path, err); err != nil {
+		return nil, err
 	}
-	if r == nil || r.RawResponse == nil {
-		fmt.Printf("received nil response or raw response")
-		c.AliveMap.Alive = make(map[int]int)
-		return c.AliveMap.Alive, nil
+	if r.StatusCode() < 200 || r.StatusCode() >= 300 {
+		return nil, fmt.Errorf("Panel alive request failed: unexpected HTTP %d", r.StatusCode())
 	}
 	defer r.RawResponse.Body.Close()
-	if err := json.Unmarshal(r.Body(), c.AliveMap); err != nil {
-		fmt.Printf("unmarshal user alive list error: %s", err)
-		c.AliveMap.Alive = make(map[int]int)
+	// Decode into a new value. A failed or partial response must never replace
+	// the last authoritative alive list with an empty or partially decoded map.
+	var next AliveMap
+	if err := json.Unmarshal(r.Body(), &next); err != nil || next.Alive == nil {
+		return nil, fmt.Errorf("decode user alive list error: invalid Panel response")
 	}
-
+	c.AliveMap = &next
 	return c.AliveMap.Alive, nil
 }
 
@@ -148,7 +146,7 @@ func (c *Client) ReportNodeOnlineUsers(data *map[int][]string) error {
 	err = c.checkResponse(r, path, err)
 
 	if err != nil {
-		return nil
+		return err
 	}
 
 	return nil

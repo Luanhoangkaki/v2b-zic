@@ -50,6 +50,16 @@ func (c *Controller) startTasks(node *panel.NodeInfo) {
 }
 
 func (c *Controller) nodeInfoMonitor() (err error) {
+	// Alive failures must not consume config/user cache validators before the
+	// controller can apply those updates on the next successful poll.
+	newA, err := c.apiClient.GetUserAlive()
+	if err != nil {
+		log.WithFields(log.Fields{
+			"tag": c.tag,
+			"err": err,
+		}).Error("Get alive list failed")
+		return nil
+	}
 	// get node info
 	newN, err := c.apiClient.GetNodeInfo()
 	if err != nil {
@@ -66,15 +76,6 @@ func (c *Controller) nodeInfoMonitor() (err error) {
 			"tag": c.tag,
 			"err": err,
 		}).Error("Get user list failed")
-		return nil
-	}
-	// get user alive
-	newA, err := c.apiClient.GetUserAlive()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"tag": c.tag,
-			"err": err,
-		}).Error("Get alive list failed")
 		return nil
 	}
 	if newN != nil {

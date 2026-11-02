@@ -157,6 +157,9 @@ func (c *Client) GetNodeInfo() (node *NodeInfo, err error) {
 		ForceContentType("application/json").
 		Get(path)
 
+	if err = c.checkResponse(r, path, err); err != nil {
+		return nil, err
+	}
 	if r.StatusCode() == 304 {
 		return nil, nil
 	}
@@ -164,11 +167,6 @@ func (c *Client) GetNodeInfo() (node *NodeInfo, err error) {
 	newBodyHash := hex.EncodeToString(hash[:])
 	if c.responseBodyHash == newBodyHash {
 		return nil, nil
-	}
-	c.responseBodyHash = newBodyHash
-	c.nodeEtag = r.Header().Get("ETag")
-	if err = c.checkResponse(r, path, err); err != nil {
-		return nil, err
 	}
 
 	if r != nil {
@@ -195,7 +193,7 @@ func (c *Client) GetNodeInfo() (node *NodeInfo, err error) {
 		rsp := &VAllssNode{}
 		err = json.Unmarshal(r.Body(), rsp)
 		if err != nil {
-			return nil, fmt.Errorf("decode v2ray params error: %s", err)
+			return nil, fmt.Errorf("decode v2ray params error: invalid Panel response")
 		}
 		if len(rsp.NetworkSettingsBack) > 0 {
 			rsp.NetworkSettings = rsp.NetworkSettingsBack
@@ -212,7 +210,7 @@ func (c *Client) GetNodeInfo() (node *NodeInfo, err error) {
 		rsp := &ShadowsocksNode{}
 		err = json.Unmarshal(r.Body(), rsp)
 		if err != nil {
-			return nil, fmt.Errorf("decode shadowsocks params error: %s", err)
+			return nil, fmt.Errorf("decode shadowsocks params error: invalid Panel response")
 		}
 		cm = &rsp.CommonNode
 		node.Shadowsocks = rsp
@@ -221,7 +219,7 @@ func (c *Client) GetNodeInfo() (node *NodeInfo, err error) {
 		rsp := &TrojanNode{}
 		err = json.Unmarshal(r.Body(), rsp)
 		if err != nil {
-			return nil, fmt.Errorf("decode trojan params error: %s", err)
+			return nil, fmt.Errorf("decode trojan params error: invalid Panel response")
 		}
 		cm = &rsp.CommonNode
 		node.Trojan = rsp
@@ -230,7 +228,7 @@ func (c *Client) GetNodeInfo() (node *NodeInfo, err error) {
 		rsp := &TuicNode{}
 		err = json.Unmarshal(r.Body(), rsp)
 		if err != nil {
-			return nil, fmt.Errorf("decode tuic params error: %s", err)
+			return nil, fmt.Errorf("decode tuic params error: invalid Panel response")
 		}
 		cm = &rsp.CommonNode
 		node.Tuic = rsp
@@ -239,7 +237,7 @@ func (c *Client) GetNodeInfo() (node *NodeInfo, err error) {
 		rsp := &AnyTlsNode{}
 		err = json.Unmarshal(r.Body(), rsp)
 		if err != nil {
-			return nil, fmt.Errorf("decode anytls params error: %s", err)
+			return nil, fmt.Errorf("decode anytls params error: invalid Panel response")
 		}
 		cm = &rsp.CommonNode
 		node.AnyTls = rsp
@@ -248,7 +246,7 @@ func (c *Client) GetNodeInfo() (node *NodeInfo, err error) {
 		rsp := &HysteriaNode{}
 		err = json.Unmarshal(r.Body(), rsp)
 		if err != nil {
-			return nil, fmt.Errorf("decode hysteria params error: %s", err)
+			return nil, fmt.Errorf("decode hysteria params error: invalid Panel response")
 		}
 		cm = &rsp.CommonNode
 		node.Hysteria = rsp
@@ -257,13 +255,16 @@ func (c *Client) GetNodeInfo() (node *NodeInfo, err error) {
 		rsp := &Hysteria2Node{}
 		err = json.Unmarshal(r.Body(), rsp)
 		if err != nil {
-			return nil, fmt.Errorf("decode hysteria2 params error: %s", err)
+			return nil, fmt.Errorf("decode hysteria2 params error: invalid Panel response")
 		}
 		cm = &rsp.CommonNode
 		node.Hysteria2 = rsp
 		node.Security = Tls
 	}
 
+	if cm == nil || cm.BaseConfig == nil {
+		return nil, fmt.Errorf("decode node params error: missing Panel base configuration")
+	}
 	// parse rules and dns
 	for i := range cm.Routes {
 		var matchs []string
@@ -308,6 +309,10 @@ func (c *Client) GetNodeInfo() (node *NodeInfo, err error) {
 	node.PushInterval = intervalToTime(cm.BaseConfig.PushInterval)
 	node.PullInterval = intervalToTime(cm.BaseConfig.PullInterval)
 
+	// Only cache a successfully decoded response; otherwise a repeated error
+	// body could be mistaken for an unchanged, valid node configuration.
+	c.responseBodyHash = newBodyHash
+	c.nodeEtag = r.Header().Get("ETag")
 	node.Common = cm
 	// clear
 	cm.Routes = nil
