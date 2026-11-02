@@ -64,7 +64,10 @@ mkd() { local m=$1; shift; mkdir -p -- "$@"; chmod "$m" "$@"; }
 
 # ---------- kiểm tra đầu vào ----------
 valid_url() { [[ $1 =~ ^https://[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?(:[0-9]{1,5})?(/[A-Za-z0-9._~/-]*)?$ ]]; }
-valid_key() { [[ $1 =~ ^[A-Za-z0-9._~+=/-]+$ ]] && [ "${#1}" -ge 8 ] && [ "${#1}" -le 256 ]; }
+# Source không kiểm tra định dạng key (chỉ dùng làm query token và chuỗi JSON), nên chấp nhận mọi
+# ký tự ASCII in được trừ khoảng trắng. Key được escape khi ghi JSON và giữ nguyên khi nhập.
+valid_key() { [[ $1 =~ ^[!-~]+$ ]] && [ "${#1}" -le 1024 ]; }
+json_escape() { local s=$1; s=${s//\\/\\\\}; s=${s//\"/\\\"}; printf '%s' "$s"; }
 valid_id()  { [[ $1 =~ ^[1-9][0-9]{0,8}$ ]]; }
 valid_path() { [[ $1 =~ ^/[A-Za-z0-9._/-]+$ && $1 != *..* ]]; }
 valid_domain() { [[ $1 =~ ^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+$ ]]; }
@@ -208,7 +211,7 @@ write_config() { # write_config <đường dẫn>
     {
       "Core": "$C_CORE",
       "ApiHost": "$C_URL",
-      "ApiKey": "$C_KEY",
+      "ApiKey": "$(json_escape "$C_KEY")",
       "NodeID": $C_ID,
       "NodeType": "$C_TYPE",
       "Timeout": 30,
