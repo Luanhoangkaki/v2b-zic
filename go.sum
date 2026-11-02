@@ -1133,8 +1133,8 @@ github.com/wyx2685/sing-box_mod v1.13.0-alpha.5.0.20251202212447-8d054dcd8bfe h1
 github.com/wyx2685/sing-box_mod v1.13.0-alpha.5.0.20251202212447-8d054dcd8bfe/go.mod h1:1VDZd5lZAsxv7d1OdVyyKyv/qZ/zkxID6PAjYGVR6Ok=
 github.com/wyx2685/sing-vmess v0.0.0-20250723121437-95d5ab59ff92 h1:A5/G1mY1M3h+j6D3BgfRlngbsfTUGwE8S3UuyR9VfbU=
 github.com/wyx2685/sing-vmess v0.0.0-20250723121437-95d5ab59ff92/go.mod h1:ZvICtYzgNgbRy2fgKTVmG4o+6pP92dzY5GhwSlfya8Q=
-github.com/wyx2685/xray-core v0.0.0-20251202200223-63db1dc9e9e2 h1:22XxgTBYlo0QLuB8frtd+MH1+g1Q6r2UgQ4mYt/7Sp8=
-github.com/wyx2685/xray-core v0.0.0-20251202200223-63db1dc9e9e2/go.mod h1:yTB/iXzdo38F+nUYbjD5Eys88SP6N2zd0jyEmrBB37U=
+github.com/wyx2685/xray-core v0.0.0-20251208163142-59b3434a00d2 h1:hO5DdlI870ebrE12LeRoT+RWi5jcy9hmsK4m2A2SHpM=
+github.com/wyx2685/xray-core v0.0.0-20251208163142-59b3434a00d2/go.mod h1:yTB/iXzdo38F+nUYbjD5Eys88SP6N2zd0jyEmrBB37U=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
 github.com/xdg-go/pbkdf2 v1.0.0/go.mod h1:jrpuAogTd400dnrH08LKmI/xc1MbPOebTwRqcT5RDeI=
